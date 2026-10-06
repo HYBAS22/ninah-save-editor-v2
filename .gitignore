@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.bak-*
+*.sav.json
+keys.json
+build/
+dist/
+*.spec
+backup/
+*.sav
+*.bin
+other/

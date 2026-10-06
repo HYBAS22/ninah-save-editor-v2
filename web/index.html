@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NINAH Save Editor — No, I'm not a Human</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">NINAH <span>save editor</span> <em id="ver"></em></div>
+  <div class="filebar">
+    <select id="filepick" title="found saves"></select>
+    <button id="openbtn" title="open selected save">Open</button>
+    <button id="reloadbtn" title="discard unsaved changes">Reload</button>
+    <button id="savebtn" class="primary" title="save to file + registry + Steam Cloud">Save</button>
+    <button id="snapbtn" title="snapshot everything (file + registry + cloud)">Backup</button>
+    <select id="snaplist" title="snapshots"></select>
+    <button id="restorebtn" title="restore selected snapshot">Restore</button>
+  </div>
+  <div id="verify" class="verify" title="decrypt / sync status">…</div>
+</header>
+<div class="layout">
+  <aside id="side">
+    <input id="ctlsearch" placeholder="filter controllers…">
+    <ul id="ctllist"></ul>
+    <div class="hint">$type metadata hidden.<br>Game must be <b>closed</b> while saving, or Steam Cloud overwrites your edit.</div>
+  </aside>
+  <main>
+    <div class="toolbar">
+      <div class="modetabs">
+        <button id="mode-simple" class="sel">Simple</button><button id="mode-expert">Expert</button>
+      </div>
+      <strong id="ctltitle">—</strong>
+      <input id="leafsearch" placeholder="filter fields…">
+      <button id="rawbtn" title="edit whole controller as raw JSON">{} raw</button>
+    </div>
+    <div id="rawwrap" class="hidden">
+      <textarea id="rawtext" rows="18" spellcheck="false"></textarea>
+      <div><button id="rawapply" class="primary">Apply raw JSON</button></div>
+    </div>
+    <div id="tree"></div>
+    <div id="simple" class="hidden"></div>
+  </main>
+</div>
+<div id="toast"></div>
+<script src="app.js"></script>
+<script src="simple.js"></script>
+</body>
+</html>
