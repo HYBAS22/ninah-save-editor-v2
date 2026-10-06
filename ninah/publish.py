@@ -20,7 +20,7 @@ def default_backup_dir(save_path):
 
 
 def publish(savefile, targets=TARGETS, backup_dir=None,
-            cloud_factory=None, filename=None, reg_base=None):
+            filename=None, reg_base=None):
     """Returns {target: {"ok": bool, "detail": str, "backup": path|None}}."""
     targets = [t for t in targets if t in TARGETS]
     if not targets:
@@ -61,23 +61,18 @@ def publish(savefile, targets=TARGETS, backup_dir=None,
 
     if "cloud" in targets:
         try:
-            from .cloudapi import Cloud
-            fac = cloud_factory or Cloud
-            with fac() as c:
-                old = None
-                try:
-                    old = c.read(filename)
-                    with open(os.path.join(backup_dir, "%s.cloud-prev" % filename), "wb") as f:
-                        f.write(old)
-                except Exception:
-                    pass
-                c.write(filename, blob)
-                back = c.read(filename)
-                if back.decode("ascii") != blob:
-                    raise CryptoError("cloud re-read differs")
-                rep["cloud"] = {"ok": True, "detail": "%d bytes, re-read matches" % len(back),
-                                "backup": os.path.join(backup_dir, "%s.cloud-prev" % filename)
-                                if old is not None else None}
+            from .cloudapi import cloud_call
+            old = None
+            try:
+                old = cloud_call("read", filename)["data"]
+                with open(os.path.join(backup_dir, "%s.cloud-prev" % filename), "wb") as f:
+                    f.write(old.encode("ascii"))
+            except Exception:
+                pass
+            out = cloud_call("write", filename, blob)
+            rep["cloud"] = {"ok": True, "detail": "%d bytes, re-read matches" % len(blob),
+                            "backup": os.path.join(backup_dir, "%s.cloud-prev" % filename)
+                            if old is not None else None}
         except Exception as e:
             rep["cloud"] = {"ok": False, "detail": "%s: %s" % (type(e).__name__, e),
                             "backup": None}

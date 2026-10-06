@@ -3,6 +3,12 @@
 No Valve binaries are shipped: the DLL is loaded from the installed game
 (NoImNotAHuman_Data/Plugins/x86_64/steam_api64.dll). Requires a running
 Steam client + ownership of the game.
+
+IMPORTANT: every API session is bound to our PID, and Steam keeps showing
+the game as "running" while a long-lived process holds it — even after
+Shutdown. So the GUI server NEVER talks to Steam in-process: use
+cloud_call() which runs one op in a short-lived child that exits at once.
+The Cloud class below stays for direct (short-lived) use: CLI, tests.
 """
 import ctypes
 import os
@@ -131,3 +137,49 @@ class Cloud:
         if not ok:
             raise CloudError("cloud delete failed: %s" % name)
         return True
+
+
+def _base_cmd():
+    import sys
+    if getattr(sys, "frozen", False):
+        return [sys.executable]
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return [sys.executable, os.path.join(root, "ninah_tool.py")]
+
+
+def cloud_call(op, filename="", blob_text=None, timeout=90):
+    """Run one cloud op in a short-lived child process. Returns parsed JSON.
+
+    Raises CloudError on failure. The child prints {"ok": ...} to stdout.
+    """
+    import json
+    import subprocess
+    import tempfile
+    cmd = _base_cmd() + ["_cloud", op]
+    tmp = None
+    if op == "write":
+        if blob_text is None:
+            raise CloudError("write needs blob_text")
+        fd, tmp = tempfile.mkstemp(prefix="ninah-blob-", suffix=".txt")
+        with os.fdopen(fd, "w", encoding="ascii") as f:
+            f.write(blob_text)
+        cmd += [filename, tmp]
+    elif op in ("read", "delete"):
+        cmd += [filename]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise CloudError("cloud child timed out (%s %s)" % (op, filename))
+    finally:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+    try:
+        out = json.loads(r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        raise CloudError("cloud child gave no JSON (rc=%d): %s" % (r.returncode, r.stderr[-300:]))
+    if not out.get("ok"):
+        raise CloudError(out.get("error", "unknown cloud error"))
+    return out

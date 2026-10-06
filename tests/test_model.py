@@ -189,5 +189,15 @@ class TestRegistry(unittest.TestCase):
             self._clean()
 
 
+class TestCloudChild(unittest.TestCase):
+    def test_cloud_list(self):
+        if not os.environ.get("NINAH_TEST_CLOUD"):
+            self.skipTest("set NINAH_TEST_CLOUD=1 to run (needs live Steam)")
+        from ninah.cloudapi import cloud_call
+        out = cloud_call("list")
+        names = [f["name"] for f in out["files"]]
+        self.assertIn("GameSaveData.sav", names)
+
+
 if __name__ == "__main__":
     unittest.main()

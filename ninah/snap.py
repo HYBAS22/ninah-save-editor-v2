@@ -49,17 +49,16 @@ def take(label="", kinds=("game", "meta"), cloud=True):
         manifest["files"][kind] = entry
     if cloud:
         try:
-            from .cloudapi import Cloud
-            with Cloud() as c:
-                have = dict((n, s) for n, s in c.files())
-                for kind in kinds:
-                    fn = reg_mod.FILENAMES[kind]
-                    if fn in have:
-                        with open(os.path.join(dest, "%s.cloud" % kind), "wb") as f:
-                            f.write(c.read(fn))
-                        manifest["files"][kind]["cloud"] = True
-                    else:
-                        manifest["files"][kind]["cloud"] = "absent in cloud"
+            from .cloudapi import cloud_call
+            have = dict((f["name"], f["size"]) for f in cloud_call("list")["files"])
+            for kind in kinds:
+                fn = reg_mod.FILENAMES[kind]
+                if fn in have:
+                    with open(os.path.join(dest, "%s.cloud" % kind), "wb") as f:
+                        f.write(cloud_call("read", fn)["data"].encode("ascii"))
+                    manifest["files"][kind]["cloud"] = True
+                else:
+                    manifest["files"][kind]["cloud"] = "absent in cloud"
         except Exception as e:
             manifest["cloud_error"] = "%s: %s" % (type(e).__name__, e)
     with open(os.path.join(dest, MANIFEST), "w", encoding="utf-8") as f:

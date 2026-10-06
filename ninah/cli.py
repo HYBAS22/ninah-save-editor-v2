@@ -118,6 +118,41 @@ def cmd_publish(args):
     return rc
 
 
+def cmd__cloud(args):
+    """Internal: single Steam Cloud op in a SHORT-LIVED process.
+
+    The OS Steam client binds an app session to our PID; a long-lived
+    process (GUI server) keeps a ghost "game running" status even after
+    Shutdown. A child that exits right away always clears the session.
+    Prints JSON result to stdout.
+    """
+    import json as _json
+    from .cloudapi import Cloud
+    out = {"ok": False}
+    try:
+        with Cloud() as c:
+            if args.op == "list":
+                out["files"] = [{"name": n, "size": s} for n, s in c.files()]
+            elif args.op == "read":
+                out["data"] = c.read(args.filename).decode("ascii")
+            elif args.op == "write":
+                data = open(args.blobfile, encoding="ascii").read()
+                c.write(args.filename, data)
+                back = c.read(args.filename)
+                out["match"] = (back.decode("ascii") == data)
+                if not out["match"]:
+                    raise ValueError("cloud re-read differs")
+            elif args.op == "delete":
+                c.delete(args.filename)
+            else:
+                raise ValueError("unknown op %r" % args.op)
+            out["ok"] = True
+    except Exception as e:
+        out["error"] = "%s: %s" % (type(e).__name__, e)
+    print(_json.dumps(out))
+    return 0 if out["ok"] else 1
+
+
 def cmd_backup(args):
     from .snap import take
     d = take(label=args.label or "")
@@ -223,6 +258,11 @@ def build_parser():
 
     r = sub.add_parser("restore", help="write a snapshot back to live stores")
     r.add_argument("name", help="snapshot dir or name")
+
+    c = sub.add_parser("_cloud", help="internal: one cloud op, then exit")
+    c.add_argument("op", choices=["list", "read", "write", "delete"])
+    c.add_argument("filename", nargs="?", default="")
+    c.add_argument("blobfile", nargs="?", default="")
     return p
 
 
@@ -233,7 +273,7 @@ def main(argv=None):
                 "get": cmd_get, "set": cmd_set, "enc": cmd_enc,
                 "verify": cmd_verify, "publish": cmd_publish,
                 "backup": cmd_backup, "backups": cmd_backups,
-                "restore": cmd_restore}[args.cmd](args)
+                "restore": cmd_restore, "_cloud": cmd__cloud}[args.cmd](args)
     except (CryptoError, KeyError, ValueError) as ex:
         print("error: %s" % ex)
         return 1

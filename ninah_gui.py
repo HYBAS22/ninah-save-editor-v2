@@ -204,6 +204,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    if "_cloud" in sys.argv:
+        from ninah.cli import main as cli_main
+        return cli_main()
     args = sys.argv[1:]
     port = 0
     no_browser = False
