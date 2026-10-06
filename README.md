@@ -1,3 +1,7 @@
+<p align="center">
+<img width="773" height="372" alt="fun" src="https://github.com/user-attachments/assets/04a6275a-ea20-4262-b9c1-ab97ccdc173e" />
+</p>
+
 # NINAH Save Tool v2 — “No, I'm not a Human” save editor
 
 Decrypt, view and edit (`.sav`) saves of
